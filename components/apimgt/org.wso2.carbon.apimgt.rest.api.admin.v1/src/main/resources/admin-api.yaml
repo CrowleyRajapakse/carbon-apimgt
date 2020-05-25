@@ -4609,7 +4609,9 @@ definitions:
         items:
           $ref: '#/definitions/ClaimMappingEntry'
       tokenValidation:
-        $ref: '#/definitions/TokenValidation'
+        type: array
+        items:
+          $ref: '#/definitions/TokenValidation'
       enabled:
         type: boolean
         example: true
