@@ -77,17 +77,6 @@ public class SubscriberRegistrationInterceptor extends AbstractPhaseInterceptor 
                 synchronized ((username + LOCK_POSTFIX).intern()) {
                     subscriber = apiConsumer.getSubscriber(username);
                     if (subscriber == null) {
-                        try {
-                            APIUtil.checkPermission(username, APIConstants.Permissions.API_SUBSCRIBE);
-                        } catch (APIManagementException e) {
-                            // When user does not have subscribe permission we will log it and continue flow.
-                            // This happens when user tries to access anonymous apis although he does not have subscribe
-                            // permission. It should be allowed.
-                            if (logger.isDebugEnabled()) {
-                                logger.debug("User " + username + " does not have subscribe permission", e);
-                            }
-                            return;
-                        }
                         if (!APIConstants.SUPER_TENANT_DOMAIN.equalsIgnoreCase(tenantDomain)) {
                             loadTenantRegistry();
                         }

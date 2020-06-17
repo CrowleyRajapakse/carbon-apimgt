@@ -19,7 +19,6 @@ package org.wso2.carbon.apimgt.impl;
 import org.wso2.carbon.apimgt.api.APIManagementException;
 import org.wso2.carbon.apimgt.api.model.*;
 import org.wso2.carbon.apimgt.impl.internal.ServiceReferenceHolder;
-import org.wso2.carbon.apimgt.impl.utils.APIUtil;
 
 /**
  * User aware APIConsumer implementation which ensures that the invoking user has the
@@ -56,51 +55,43 @@ public class UserAwareAPIConsumer extends APIConsumerImpl {
     @Override
     public SubscriptionResponse addSubscription(ApiTypeWrapper apiTypeWrapper,
                                                 String userId, int applicationId) throws APIManagementException {
-        checkSubscribePermission();
         return super.addSubscription(apiTypeWrapper, userId, applicationId);
     }
 
     @Override
     public SubscribedAPI getSubscriptionByUUID(String uuid) throws APIManagementException {
         SubscribedAPI subscribedAPI = super.getSubscriptionByUUID(uuid);
-        checkSubscribePermission();
         return subscribedAPI;
     }
 
     @Override
     public void removeSubscription(Identifier identifier, String userId,
                                    int applicationId) throws APIManagementException {
-        checkSubscribePermission();
         super.removeSubscription(identifier, userId, applicationId);
     }
 
     @Override
     public void removeSubscription(SubscribedAPI subscription) throws APIManagementException {
-        checkSubscribePermission();
         super.removeSubscription(subscription);
     }
 
     @Override
     public int addApplication(Application application, String userId) throws APIManagementException {
-        checkSubscribePermission();
         return super.addApplication(application, userId);
     }
 
     @Override
     public void updateApplication(Application application) throws APIManagementException {
-        checkSubscribePermission();
         super.updateApplication(application);
     }
 
     @Override
     public void removeApplication(Application application, String username) throws APIManagementException {
-        checkSubscribePermission();
         super.removeApplication(application, username);
     }
      @Override
     public void removeSubscription(APIIdentifier identifier, String userId, int applicationId, String groupId) throws
              APIManagementException {
-        checkSubscribePermission();
         super.removeSubscription(identifier, userId, applicationId, groupId);
     }
 
@@ -111,19 +102,16 @@ public class UserAwareAPIConsumer extends APIConsumerImpl {
      */
     @Override
     public void addComment(APIIdentifier identifier, String s, String user) throws APIManagementException {
-        checkSubscribePermission();
         super.addComment(identifier, s, user);
     }
 
     @Override
     public String addComment(Identifier identifier, Comment comment, String user) throws APIManagementException {
-        checkSubscribePermission();
         return super.addComment(identifier, comment, user);
     }
 
     @Override
     public void deleteComment(APIIdentifier identifier, String commentId) throws APIManagementException {
-        checkSubscribePermission();
         super.deleteComment(identifier,commentId);
     }
 
@@ -145,9 +133,5 @@ public class UserAwareAPIConsumer extends APIConsumerImpl {
         }
         checkAccessControlPermission(identifier);
         return apiTypeWrapper;
-    }
-
-    public void checkSubscribePermission() throws APIManagementException {
-        APIUtil.checkPermission(username, APIConstants.Permissions.API_SUBSCRIBE);
     }
 }

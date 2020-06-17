@@ -83,7 +83,6 @@ public class ApplicationImportExportManager {
         Subscriber subscriber = apiConsumer.getSubscriber(userId);
         try {
             if (subscriber == null && !APIUtil.isPermissionCheckDisabled()) {
-                APIUtil.checkPermission(userId, APIConstants.Permissions.API_SUBSCRIBE);
                 apiConsumer.addSubscriber(userId, groupId);
             }
         } catch (APIManagementException e) {

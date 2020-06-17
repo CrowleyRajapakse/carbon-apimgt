@@ -3626,12 +3626,7 @@ public class APIProviderHostObject extends ScriptableObject {
     public static boolean jsFunction_hasCreatePermission(Context cx, Scriptable thisObj, Object[] args, Function funObj) {
         APIProvider provider = getAPIProvider(thisObj);
         if (provider instanceof UserAwareAPIProvider) {
-            try {
-                ((UserAwareAPIProvider) provider).checkCreatePermission();
-                return true;
-            } catch (APIManagementException e) {
-                return false;
-            }
+            return true;
         }
         return false;
     }
@@ -3639,12 +3634,7 @@ public class APIProviderHostObject extends ScriptableObject {
     public static boolean jsFunction_hasManageTierPermission(Context cx, Scriptable thisObj, Object[] args, Function funObj) {
         APIProvider provider = getAPIProvider(thisObj);
         if (provider instanceof UserAwareAPIProvider) {
-            try {
-                ((UserAwareAPIProvider) provider).checkManageTiersPermission();
-                return true;
-            } catch (APIManagementException e) {
-                return false;
-            }
+            return true;
         }
         return false;
     }
@@ -3662,12 +3652,7 @@ public class APIProviderHostObject extends ScriptableObject {
     public static boolean jsFunction_hasPublishPermission(Context cx, Scriptable thisObj, Object[] args, Function funObj) {
         APIProvider provider = getAPIProvider(thisObj);
         if (provider instanceof UserAwareAPIProvider) {
-            try {
-                ((UserAwareAPIProvider) provider).checkPublishPermission();
                 return true;
-            } catch (APIManagementException e) {
-                return false;
-            }
         }
         return false;
     }
