@@ -59,39 +59,7 @@ import org.wso2.carbon.apimgt.api.dto.CertificateMetadataDTO;
 import org.wso2.carbon.apimgt.api.dto.ClientCertificateDTO;
 import org.wso2.carbon.apimgt.api.dto.KeyManagerConfigurationDTO;
 import org.wso2.carbon.apimgt.api.dto.UserApplicationAPIUsage;
-import org.wso2.carbon.apimgt.api.model.API;
-import org.wso2.carbon.apimgt.api.model.APICategory;
-import org.wso2.carbon.apimgt.api.model.APIIdentifier;
-import org.wso2.carbon.apimgt.api.model.APIProduct;
-import org.wso2.carbon.apimgt.api.model.APIProductIdentifier;
-import org.wso2.carbon.apimgt.api.model.APIProductResource;
-import org.wso2.carbon.apimgt.api.model.APIStateChangeResponse;
-import org.wso2.carbon.apimgt.api.model.APIStatus;
-import org.wso2.carbon.apimgt.api.model.APIStore;
-import org.wso2.carbon.apimgt.api.model.ApiTypeWrapper;
-import org.wso2.carbon.apimgt.api.model.BlockConditionsDTO;
-import org.wso2.carbon.apimgt.api.model.CORSConfiguration;
-import org.wso2.carbon.apimgt.api.model.DeploymentEnvironments;
-import org.wso2.carbon.apimgt.api.model.DeploymentStatus;
-import org.wso2.carbon.apimgt.api.model.Documentation;
-import org.wso2.carbon.apimgt.api.model.DuplicateAPIException;
-import org.wso2.carbon.apimgt.api.model.EndpointSecurity;
-import org.wso2.carbon.apimgt.api.model.Identifier;
-import org.wso2.carbon.apimgt.api.model.KeyManager;
-import org.wso2.carbon.apimgt.api.model.Label;
-import org.wso2.carbon.apimgt.api.model.LifeCycleEvent;
-import org.wso2.carbon.apimgt.api.model.Monetization;
-import org.wso2.carbon.apimgt.api.model.Provider;
-import org.wso2.carbon.apimgt.api.model.ResourceFile;
-import org.wso2.carbon.apimgt.api.model.ResourcePath;
-import org.wso2.carbon.apimgt.api.model.Scope;
-import org.wso2.carbon.apimgt.api.model.SharedScopeUsage;
-import org.wso2.carbon.apimgt.api.model.SubscribedAPI;
-import org.wso2.carbon.apimgt.api.model.Subscriber;
-import org.wso2.carbon.apimgt.api.model.SwaggerData;
-import org.wso2.carbon.apimgt.api.model.Tier;
-import org.wso2.carbon.apimgt.api.model.URITemplate;
-import org.wso2.carbon.apimgt.api.model.Usage;
+import org.wso2.carbon.apimgt.api.model.*;
 import org.wso2.carbon.apimgt.api.model.policy.APIPolicy;
 import org.wso2.carbon.apimgt.api.model.policy.ApplicationPolicy;
 import org.wso2.carbon.apimgt.api.model.policy.Condition;
@@ -8978,5 +8946,103 @@ class APIProviderImpl extends AbstractAPIManager implements APIProvider {
                 deleteScope(scope, tenantId);
             }
         }
+    }
+
+    /**
+     * Adds a new APIRevision to an existing API
+     *
+     * @param apiRevision APIRevision
+     * @throws APIManagementException if failed to add APIRevision
+     */
+    @Override
+    public String addAPIRevision(APIRevision apiRevision) throws APIManagementException {
+        int revisionId = apiMgtDAO.getMostRecentRevisionId(apiRevision.getApiUUID()) + 1;
+        apiRevision.setId(revisionId);
+        String revisionUUID = createAPIRevisionRegistryArtifacts(apiRevision.getApiUUID(), revisionId);
+        apiRevision.setRevisionUUID(revisionUUID);
+        apiMgtDAO.addAPIRevision(apiRevision);
+        //TODO: Need to do rest of the tables revisioned after adding the revision
+        return revisionUUID;
+    }
+
+    /**
+     * Get a Revision related to provided and revision UUID
+     *
+     * @param revisionUUID API Revision UUID
+     * @return API Revision
+     * @throws APIManagementException if failed to get the related API revision
+     */
+    @Override
+    public APIRevision getAPIRevision(String revisionUUID) throws APIManagementException {
+        return apiMgtDAO.getRevisionByRevisionUUID(revisionUUID);
+    }
+
+    /**
+     * Copy Api registry artifacts to the revision registry location
+     *
+     * @param apiUUID API UUID
+     * @param revisionId Revision ID
+     * @throws APIManagementException if failed to copy API registry artifacts
+     */
+    protected String createAPIRevisionRegistryArtifacts(String apiUUID, int revisionId) throws APIManagementException {
+        String revisionUUID = null;
+        APIIdentifier apiId = APIUtil.getAPIIdentifierFromUUID(apiUUID);
+        String apiPath = APIUtil.getAPIPath(apiId);
+        int prependIndex = apiPath.indexOf(apiId.getVersion()) + apiId.getVersion().length();
+        String apiSourcePath = apiPath.substring(0, prependIndex );
+        String revisionTargetPath = APIConstants.API_REVISION_LOCATION + RegistryConstants.PATH_SEPARATOR +
+                apiUUID +
+                RegistryConstants.PATH_SEPARATOR + revisionId +
+                RegistryConstants.PATH_SEPARATOR;
+
+        boolean transactionCommitted = false;
+        try {
+            registry.beginTransaction();
+            if (registry.resourceExists(revisionTargetPath)) {
+                throw new APIManagementException("API revision already exists with id: " + revisionId);
+            }
+            registry.copy(apiSourcePath, revisionTargetPath);
+            Resource apiRevisionArtifact = registry.get(revisionTargetPath + "api");
+            registry.commitTransaction();
+            transactionCommitted = true;
+            if (log.isDebugEnabled()) {
+                String logMessage =
+                        "Revision for API Name: " + apiId.getApiName() + ", API Version " + apiId.getVersion()
+                                + " created";
+                log.debug(logMessage);
+            }
+            revisionUUID = apiRevisionArtifact.getUUID();
+        } catch (RegistryException e) {
+            try {
+                registry.rollbackTransaction();
+            } catch (RegistryException re) {
+                // Throwing an error here would mask the original exception
+                log.error("Error while rolling back the transaction for revision creation for API : " + apiId.getApiName(), re);
+            }
+            handleException("Error while performing registry transaction operation", e);
+        } catch (APIManagementException e) {
+            handleException("Error while creating API Revision", e);
+        } finally {
+            try {
+                if (!transactionCommitted) {
+                    registry.rollbackTransaction();
+                }
+            } catch (RegistryException ex) {
+                handleException("Error while rolling back the transaction for revision creation for API: " + apiId.getApiName(), ex);
+            }
+        }
+        return revisionUUID;
+    }
+
+    /**
+     * Get a List of API Revisions related to provided API UUID
+     *
+     * @param apiUUID API  UUID
+     * @return API Revision List
+     * @throws APIManagementException if failed to get the related API revision
+     */
+    @Override
+    public List<APIRevision> getAPIRevisions(String apiUUID) throws APIManagementException {
+        return apiMgtDAO.getRevisionsListByAPIUUID(apiUUID);
     }
 }

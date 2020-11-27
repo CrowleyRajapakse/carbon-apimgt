@@ -3628,6 +3628,17 @@ public class SQLConstants {
                 "DELETE FROM AM_KEY_MANAGER WHERE UUID = ? AND TENANT_DOMAIN = ?";
     }
 
+    public static class APIRevisionSqlConstants {
+        public static final String ADD_API_REVISION =
+                " INSERT INTO AM_REVISION (ID, API_UUID, REVISION_UUID, DESCRIPTION, CREATED_BY)" +
+                        " VALUES (?,?,?,?,?)";
+        public static final String DELETE_API_REVISION =
+                "DELETE FROM AM_KEY_MANAGER WHERE UUID = ? AND TENANT_DOMAIN = ?";
+        public static final String GET_MOST_RECENT_REVISION_ID = "SELECT MAX(ID) FROM AM_REVISION WHERE API_UUID = ?";
+        public static final String GET_REVISION_BY_REVISION_UUID = "SELECT * FROM AM_REVISION WHERE REVISION_UUID = ?";
+        public static final String GET_REVISIONS_BY_API_UUID = "SELECT * FROM AM_REVISION WHERE API_UUID = ?";
+    }
+
     /**
      * Static class to hold database queries related to AM_TENANT_THEMES table
      */

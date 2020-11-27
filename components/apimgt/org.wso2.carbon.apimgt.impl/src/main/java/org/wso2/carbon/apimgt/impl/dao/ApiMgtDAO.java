@@ -35,35 +35,7 @@ import org.wso2.carbon.apimgt.api.dto.ConditionDTO;
 import org.wso2.carbon.apimgt.api.dto.ConditionGroupDTO;
 import org.wso2.carbon.apimgt.api.dto.KeyManagerConfigurationDTO;
 import org.wso2.carbon.apimgt.api.dto.UserApplicationAPIUsage;
-import org.wso2.carbon.apimgt.api.model.API;
-import org.wso2.carbon.apimgt.api.model.APICategory;
-import org.wso2.carbon.apimgt.api.model.APIIdentifier;
-import org.wso2.carbon.apimgt.api.model.APIKey;
-import org.wso2.carbon.apimgt.api.model.APIProduct;
-import org.wso2.carbon.apimgt.api.model.APIProductIdentifier;
-import org.wso2.carbon.apimgt.api.model.APIProductResource;
-import org.wso2.carbon.apimgt.api.model.APIStatus;
-import org.wso2.carbon.apimgt.api.model.APIStore;
-import org.wso2.carbon.apimgt.api.model.AccessTokenInfo;
-import org.wso2.carbon.apimgt.api.model.ApiTypeWrapper;
-import org.wso2.carbon.apimgt.api.model.Application;
-import org.wso2.carbon.apimgt.api.model.BlockConditionsDTO;
-import org.wso2.carbon.apimgt.api.model.Comment;
-import org.wso2.carbon.apimgt.api.model.Identifier;
-import org.wso2.carbon.apimgt.api.model.KeyManager;
-import org.wso2.carbon.apimgt.api.model.Label;
-import org.wso2.carbon.apimgt.api.model.LifeCycleEvent;
-import org.wso2.carbon.apimgt.api.model.MonetizationUsagePublishInfo;
-import org.wso2.carbon.apimgt.api.model.OAuthAppRequest;
-import org.wso2.carbon.apimgt.api.model.OAuthApplicationInfo;
-import org.wso2.carbon.apimgt.api.model.ResourcePath;
-import org.wso2.carbon.apimgt.api.model.Scope;
-import org.wso2.carbon.apimgt.api.model.SharedScopeUsage;
-import org.wso2.carbon.apimgt.api.model.SubscribedAPI;
-import org.wso2.carbon.apimgt.api.model.Subscriber;
-import org.wso2.carbon.apimgt.api.model.Tier;
-import org.wso2.carbon.apimgt.api.model.URITemplate;
-import org.wso2.carbon.apimgt.api.model.Workflow;
+import org.wso2.carbon.apimgt.api.model.*;
 import org.wso2.carbon.apimgt.api.model.botDataAPI.BotDetectionData;
 import org.wso2.carbon.apimgt.api.model.graphql.queryanalysis.CustomComplexityDetails;
 import org.wso2.carbon.apimgt.api.model.graphql.queryanalysis.GraphqlComplexityInfo;
@@ -15426,4 +15398,110 @@ public class ApiMgtDAO {
                     + APIUtil.getTenantDomainFromTenantId(tenantId), e);
         }
     }
+
+    /**
+     * Get most recent revision id of the revisions created for a particular API.
+     *
+     * @return revision id
+     * @throws APIManagementException if an error occurs while retrieving revision id
+     */
+    public int getMostRecentRevisionId(String apiUUID) throws APIManagementException {
+        int revisionId = 0;
+        try (Connection connection = APIMgtDBUtil.getConnection();
+             PreparedStatement statement = connection
+                     .prepareStatement(SQLConstants.APIRevisionSqlConstants.GET_MOST_RECENT_REVISION_ID)) {
+            statement.setString(1, apiUUID);
+            try (ResultSet rs = statement.executeQuery()) {
+                while (rs.next()) {
+                    revisionId = rs.getInt(1);
+                }
+            }
+        } catch (SQLException e) {
+            handleException("Failed to get most recent revision ID for API UUID: " + apiUUID, e);
+        }
+        return revisionId;
+    }
+
+    /**
+     * Adds a API revision record to the database
+     *
+     * @param apiRevision content of the revision
+     * @throws APIManagementException if an error occurs when adding a new API revision
+     */
+    public void addAPIRevision(APIRevision apiRevision) throws APIManagementException {
+
+        try (Connection connection = APIMgtDBUtil.getConnection();
+             PreparedStatement statement = connection
+                     .prepareStatement(SQLConstants.APIRevisionSqlConstants.ADD_API_REVISION)) {
+            statement.setInt(1, apiRevision.getId());
+            statement.setString(2, apiRevision.getApiUUID());
+            statement.setString(3, apiRevision.getRevisionUUID());
+            statement.setString(4, apiRevision.getDescription());
+            statement.setString(5, apiRevision.getCreatedBy());
+            statement.executeUpdate();
+        } catch (SQLException e) {
+            handleException("Failed to add API Revision entry of API UUID "
+                    + apiRevision.getApiUUID(), e);
+        }
+    }
+
+    /**
+     * Get revision details by providing revision UUID
+     *
+     * @return revision object
+     * @throws APIManagementException if an error occurs while retrieving revision details
+     */
+    public APIRevision getRevisionByRevisionUUID(String revisionUUID) throws APIManagementException {
+        APIRevision apiRevision = new APIRevision();
+        try (Connection connection = APIMgtDBUtil.getConnection();
+             PreparedStatement statement = connection
+                     .prepareStatement(SQLConstants.APIRevisionSqlConstants.GET_REVISION_BY_REVISION_UUID)) {
+            statement.setString(1, revisionUUID);
+            try (ResultSet rs = statement.executeQuery()) {
+                while (rs.next()) {
+                    apiRevision.setId(rs.getInt(1));
+                    apiRevision.setApiUUID(rs.getString(2));
+                    apiRevision.setRevisionUUID(rs.getString(3));
+                    apiRevision.setDescription(rs.getString(4));
+                    apiRevision.setCreatedTime(rs.getString(5));
+                    apiRevision.setCreatedBy(rs.getString(6));
+                }
+            }
+        } catch (SQLException e) {
+            handleException("Failed to get revision details for revision UUID: " + revisionUUID, e);
+        }
+        return apiRevision;
+    }
+
+    /**
+     * Get revision details by providing revision UUID
+     *
+     * @return revisions List object
+     * @throws APIManagementException if an error occurs while retrieving revision details
+     */
+    public List<APIRevision> getRevisionsListByAPIUUID(String apiUUID) throws APIManagementException {
+
+        List<APIRevision> revisionList = new ArrayList<>();
+        try (Connection connection = APIMgtDBUtil.getConnection();
+             PreparedStatement statement = connection
+                     .prepareStatement(SQLConstants.APIRevisionSqlConstants.GET_REVISIONS_BY_API_UUID)) {
+            statement.setString(1, apiUUID);
+            try (ResultSet rs = statement.executeQuery()) {
+                while (rs.next()) {
+                    APIRevision apiRevision = new APIRevision();
+                    apiRevision.setId(rs.getInt(1));
+                    apiRevision.setApiUUID(rs.getString(2));
+                    apiRevision.setRevisionUUID(rs.getString(3));
+                    apiRevision.setDescription(rs.getString(4));
+                    apiRevision.setCreatedTime(rs.getString(5));
+                    apiRevision.setCreatedBy(rs.getString(6));
+                    revisionList.add(apiRevision);
+                }
+            }
+        } catch (SQLException e) {
+            handleException("Failed to get revision details for API UUID: " + apiUUID, e);
+        }
+        return revisionList;
+    }
+
 }
